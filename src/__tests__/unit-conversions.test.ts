@@ -906,6 +906,35 @@ beforeAll(() => {
     toolSummaries: [],
     markdown: generateHandoffMarkdown(qwenCodeSession, qwenCodeMsgs, [], [], []),
   };
+
+  // Pi-family CLIs share the same JSONL session format.
+  for (const source of ['pi', 'omp', 'cmd'] as const) {
+    const session: UnifiedSession = {
+      id: `test-${source}-session-1`,
+      source,
+      cwd: '/home/user/project',
+      repo: 'user/project',
+      lines: 2,
+      bytes: 500,
+      createdAt: now,
+      updatedAt: now,
+      originalPath: `/tmp/test-${source}-session.jsonl`,
+      summary: 'Fix auth bug',
+      model: 'claude-sonnet-4',
+    };
+    const messages: ConversationMessage[] = [
+      { role: 'user', content: 'Fix the authentication bug' },
+      { role: 'assistant', content: 'The token validation was missing.' },
+    ];
+    contexts[source] = {
+      session,
+      recentMessages: messages,
+      filesModified: [],
+      pendingTasks: [],
+      toolSummaries: [],
+      markdown: generateHandoffMarkdown(session, messages, [], [], []),
+    };
+  }
 });
 
 afterAll(() => {

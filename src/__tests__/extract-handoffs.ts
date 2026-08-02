@@ -9,6 +9,7 @@ import {
   extractAmpContext,
   extractAntigravityContext,
   extractClaudeContext,
+  extractCommandCodeContext,
   extractClineContext,
   extractCodexContext,
   extractCopilotContext,
@@ -22,9 +23,12 @@ import {
   extractOpenCodeContext,
   extractQwenCodeContext,
   extractRooCodeContext,
+  extractOmpContext,
+  extractPiContext,
   parseAmpSessions,
   parseAntigravitySessions,
   parseClaudeSessions,
+  parseCommandCodeSessions,
   parseClineSessions,
   parseCodexSessions,
   parseCopilotSessions,
@@ -38,6 +42,8 @@ import {
   parseOpenCodeSessions,
   parseQwenCodeSessions,
   parseRooCodeSessions,
+  parseOmpSessions,
+  parsePiSessions,
 } from '../parsers/index.js';
 import type { SessionContext, SessionSource, UnifiedSession } from '../types/index.js';
 
@@ -61,6 +67,9 @@ const ALL_SOURCES: SessionSource[] = [
   'antigravity',
   'kimi',
   'qwen-code',
+  'pi',
+  'omp',
+  'cmd',
 ];
 
 const parsers: Record<SessionSource, () => Promise<UnifiedSession[]>> = {
@@ -80,6 +89,9 @@ const parsers: Record<SessionSource, () => Promise<UnifiedSession[]>> = {
   antigravity: parseAntigravitySessions,
   kimi: parseKimiSessions,
   'qwen-code': parseQwenCodeSessions,
+  pi: parsePiSessions,
+  omp: parseOmpSessions,
+  cmd: parseCommandCodeSessions,
 };
 
 const extractors: Record<SessionSource, (s: UnifiedSession) => Promise<SessionContext>> = {
@@ -99,6 +111,9 @@ const extractors: Record<SessionSource, (s: UnifiedSession) => Promise<SessionCo
   antigravity: extractAntigravityContext,
   kimi: extractKimiContext,
   'qwen-code': extractQwenCodeContext,
+  pi: extractPiContext,
+  omp: extractOmpContext,
+  cmd: extractCommandCodeContext,
 };
 
 async function main() {

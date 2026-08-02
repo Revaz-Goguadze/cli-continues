@@ -21,6 +21,9 @@ export const TOOL_NAMES = Object.freeze([
   'antigravity',
   'kimi',
   'qwen-code',
+  'pi',
+  'omp',
+  'cmd',
 ] as const);
 
 /** Source CLI tool — derived from TOOL_NAMES, never defined manually */
@@ -53,6 +56,7 @@ export const READ_TOOLS: ReadonlySet<string> = new Set(['Read', 'ReadFile', 'rea
 /** File write/create tools */
 export const WRITE_TOOLS: ReadonlySet<string> = new Set([
   'Write',
+  'write',
   'WriteFile',
   'write_file',
   'Create',

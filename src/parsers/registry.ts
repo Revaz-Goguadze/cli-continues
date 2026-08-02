@@ -21,6 +21,7 @@ import {
   parseRooCodeSessions,
 } from './cline.js';
 import { extractCodexContext, parseCodexSessions } from './codex.js';
+import { extractCommandCodeContext, parseCommandCodeSessions } from './commandcode.js';
 import { extractCopilotContext, parseCopilotSessions } from './copilot.js';
 import { extractCrushContext, parseCrushSessions } from './crush.js';
 import { extractCursorContext, parseCursorSessions } from './cursor.js';
@@ -29,6 +30,7 @@ import { extractGeminiContext, parseGeminiSessions } from './gemini.js';
 import { extractKimiContext, parseKimiSessions } from './kimi.js';
 import { extractKiroContext, parseKiroSessions } from './kiro.js';
 import { extractOpenCodeContext, parseOpenCodeSessions } from './opencode.js';
+import { extractOmpContext, extractPiContext, parseOmpSessions, parsePiSessions } from './pi-family.js';
 import { extractQwenCodeContext, parseQwenCodeSessions } from './qwen-code.js';
 
 /**
@@ -937,6 +939,52 @@ register({
   crossToolArgs: (prompt) => [prompt],
   resumeCommandDisplay: (s) => `qwen --resume ${s.id}`,
   mapHandoffFlags: mapGeminiFlags,
+});
+
+// ── Pi Coding Agent ─────────────────────────────────────────────────
+register({
+  name: 'pi',
+  label: 'Pi Coding Agent',
+  color: chalk.hex('#F59E0B'),
+  storagePath: '$PI_CODING_AGENT_SESSION_DIR (default: ~/.pi/agent/sessions/)',
+  envVar: 'PI_CODING_AGENT_SESSION_DIR',
+  extraEnvVars: ['PI_CODING_AGENT_DIR'],
+  binaryName: 'pi',
+  parseSessions: parsePiSessions,
+  extractContext: extractPiContext,
+  nativeResumeArgs: (session) => ['--session', session.id],
+  crossToolArgs: (prompt) => [prompt],
+  resumeCommandDisplay: (session) => `pi --session ${session.id}`,
+});
+
+// ── Oh My Pi ────────────────────────────────────────────────────────
+register({
+  name: 'omp',
+  label: 'Oh My Pi',
+  color: chalk.hex('#22C55E'),
+  storagePath: '~/.omp/agent/sessions/',
+  binaryName: 'omp',
+  parseSessions: parseOmpSessions,
+  extractContext: extractOmpContext,
+  nativeResumeArgs: (session) => ['--resume', session.id],
+  crossToolArgs: (prompt) => [prompt],
+  resumeCommandDisplay: (session) => `omp --resume ${session.id}`,
+});
+
+// ── CommandCode ─────────────────────────────────────────────────────
+register({
+  name: 'cmd',
+  label: 'CommandCode',
+  color: chalk.hex('#38BDF8'),
+  storagePath: '~/.commandcode/projects/',
+  envVar: 'COMMANDCODE_HOME',
+  binaryName: 'cmd',
+  binaryFallbacks: ['commandcode', 'cmdc', 'command-code'],
+  parseSessions: parseCommandCodeSessions,
+  extractContext: extractCommandCodeContext,
+  nativeResumeArgs: (session) => ['--resume', session.id],
+  crossToolArgs: (prompt) => [prompt],
+  resumeCommandDisplay: (session) => `cmd --resume ${session.id}`,
 });
 
 // ── Completeness assertion ──────────────────────────────────────────
