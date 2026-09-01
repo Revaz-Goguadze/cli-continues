@@ -15,6 +15,7 @@ import {
   extractCopilotContext,
   extractCrushContext,
   extractCursorContext,
+  extractDevinContext,
   extractDroidContext,
   extractGeminiContext,
   extractKiloCodeContext,
@@ -34,6 +35,7 @@ import {
   parseCopilotSessions,
   parseCrushSessions,
   parseCursorSessions,
+  parseDevinSessions,
   parseDroidSessions,
   parseGeminiSessions,
   parseKiloCodeSessions,
@@ -69,6 +71,7 @@ const ALL_SOURCES: SessionSource[] = [
   'qwen-code',
   'pi',
   'omp',
+  'devin',
   'cmd',
 ];
 
@@ -91,6 +94,7 @@ const parsers: Record<SessionSource, () => Promise<UnifiedSession[]>> = {
   'qwen-code': parseQwenCodeSessions,
   pi: parsePiSessions,
   omp: parseOmpSessions,
+  devin: parseDevinSessions,
   cmd: parseCommandCodeSessions,
 };
 
@@ -113,6 +117,7 @@ const extractors: Record<SessionSource, (s: UnifiedSession) => Promise<SessionCo
   'qwen-code': extractQwenCodeContext,
   pi: extractPiContext,
   omp: extractOmpContext,
+  devin: extractDevinContext,
   cmd: extractCommandCodeContext,
 };
 

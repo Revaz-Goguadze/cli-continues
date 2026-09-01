@@ -25,6 +25,7 @@ import { extractCommandCodeContext, parseCommandCodeSessions } from './commandco
 import { extractCopilotContext, parseCopilotSessions } from './copilot.js';
 import { extractCrushContext, parseCrushSessions } from './crush.js';
 import { extractCursorContext, parseCursorSessions } from './cursor.js';
+import { extractDevinContext, parseDevinSessions } from './devin.js';
 import { extractDroidContext, parseDroidSessions } from './droid.js';
 import { extractGeminiContext, parseGeminiSessions } from './gemini.js';
 import { extractKimiContext, parseKimiSessions } from './kimi.js';
@@ -969,6 +970,22 @@ register({
   nativeResumeArgs: (session) => ['--resume', session.id],
   crossToolArgs: (prompt) => [prompt],
   resumeCommandDisplay: (session) => `omp --resume ${session.id}`,
+});
+
+// ── Devin CLI ────────────────────────────────────────────────────────
+register({
+  name: 'devin',
+  label: 'Devin CLI',
+  color: chalk.hex('#A78BFA'),
+  storagePath: '~/.local/share/devin/cli/sessions.db (also cli-next/)',
+  envVar: 'DEVIN_CLI_HOME',
+  extraEnvVars: ['XDG_DATA_HOME'],
+  binaryName: 'devin',
+  parseSessions: parseDevinSessions,
+  extractContext: extractDevinContext,
+  nativeResumeArgs: (session) => ['-r', session.id],
+  crossToolArgs: (prompt) => [prompt],
+  resumeCommandDisplay: (session) => `devin -r ${session.id}`,
 });
 
 // ── CommandCode ─────────────────────────────────────────────────────

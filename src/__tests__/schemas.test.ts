@@ -42,8 +42,8 @@ import { EDIT_TOOLS, READ_TOOLS, SHELL_TOOLS, TOOL_NAMES, WRITE_TOOLS } from '..
 // ── tool-names.ts ────────────────────────────────────────────────────────────
 
 describe('TOOL_NAMES', () => {
-  it('contains exactly 19 tools', () => {
-    expect(TOOL_NAMES).toHaveLength(19);
+  it('contains exactly 20 tools', () => {
+    expect(TOOL_NAMES).toHaveLength(20);
   });
 
   it('includes all known tools', () => {
@@ -66,6 +66,7 @@ describe('TOOL_NAMES', () => {
       'qwen-code',
       'pi',
       'omp',
+      'devin',
       'cmd',
     ];
     expect([...TOOL_NAMES]).toEqual(expected);

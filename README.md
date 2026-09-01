@@ -14,11 +14,11 @@ https://github.com/user-attachments/assets/6945f3a5-bd19-45ab-9702-6df8e165a734
 
 ## Supported tools
 
-19 AI coding agents, any-to-any handoff:
+20 AI coding agents, any-to-any handoff:
 
-**Claude Code** · **Codex** · **GitHub Copilot CLI** · **Gemini CLI** · **Cursor** · **Amp** · **Cline** · **Roo Code** · **Kilo Code** · **Kiro** · **Crush** · **OpenCode** · **Factory Droid** · **Antigravity** · **Kimi CLI** · **Qwen Code** · **Pi Coding Agent** · **Oh My Pi** · **CommandCode**
+**Claude Code** · **Codex** · **GitHub Copilot CLI** · **Gemini CLI** · **Cursor** · **Amp** · **Cline** · **Roo Code** · **Kilo Code** · **Kiro** · **Crush** · **OpenCode** · **Factory Droid** · **Antigravity** · **Kimi CLI** · **Qwen Code** · **Pi Coding Agent** · **Oh My Pi** · **Devin CLI** · **CommandCode**
 
-That's 342 cross-tool handoff paths. Pick any source, pick any destination — it works.
+That's 380 cross-tool handoff paths. Pick any source, pick any destination — it works.
 
 ## Install
 
@@ -30,7 +30,7 @@ npm install -g continues    # gives you `continues` and `cont`
 
 ## How it works
 
-1. **Discovery** — scans session directories for all 19 tools
+1. **Discovery** — scans session directories for all 20 tools
 2. **Parsing** — reads each tool's native format (JSONL, JSON, SQLite, YAML — they're all different)
 3. **Extraction** — pulls recent messages, file changes, tool activity, AI reasoning
 4. **Handoff** — generates a structured context doc and injects it into the target tool
@@ -81,7 +81,7 @@ continues omp           # latest Oh My Pi session
 continues cmd           # latest CommandCode session
 ```
 
-Works for all 19 tools. This uses **native resume** — same tool, full history, no context injection.
+Works for all 20 tools. This uses **native resume** — same tool, full history, no context injection.
 
 ### Cross-tool handoff
 

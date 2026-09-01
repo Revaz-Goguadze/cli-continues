@@ -23,6 +23,7 @@ export const TOOL_NAMES = Object.freeze([
   'qwen-code',
   'pi',
   'omp',
+  'devin',
   'cmd',
 ] as const);
 
