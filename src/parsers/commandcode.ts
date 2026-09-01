@@ -12,7 +12,7 @@ import type {
   UnifiedSession,
 } from '../types/index.js';
 import { isSystemContent } from '../utils/content.js';
-import { findFiles } from '../utils/fs-helpers.js';
+import { findFiles, mapConcurrent } from '../utils/fs-helpers.js';
 import { getFileStats, readJsonlFile, scanJsonlFile, scanJsonlHead } from '../utils/jsonl.js';
 import { generateHandoffMarkdown } from '../utils/markdown.js';
 import { cleanSummary, extractRepoFromCwd, homeDir } from '../utils/parser-helpers.js';
@@ -65,6 +65,8 @@ interface CommandCodeRecord {
 }
 
 const COMMANDCODE_HOME = path.join(homeDir(), '.commandcode');
+/** Files up to this size get exact line counts even in lightweight discovery. */
+const SMALL_FILE_EXACT_COUNT_BYTES = 8 * 1024;
 
 function projectsDir(): string {
   return path.join(process.env.COMMANDCODE_HOME || COMMANDCODE_HOME, 'projects');
@@ -149,23 +151,32 @@ async function scanMetadata(
     return 'continue';
   };
 
-  if (lightweight) await scanJsonlHead(filePath, 100, visitor);
-  else await scanJsonlFile(filePath, visitor);
+  if (lightweight) {
+    await scanJsonlHead(filePath, 100, (value) => {
+      visitor(value);
+      return firstUserMessage && id ? 'stop' : 'continue';
+    });
+  } else await scanJsonlFile(filePath, visitor);
   return { id, cwd, firstUserMessage, sessionName, model, branch, firstTimestamp, lastTimestamp };
 }
 
 export async function parseCommandCodeSessions(options: SessionParseOptions = {}): Promise<UnifiedSession[]> {
-  const sessions: UnifiedSession[] = [];
   const lightweight = options.lightweight === true;
-  for (const filePath of sessionFiles()) {
+  const parsed = await mapConcurrent(sessionFiles(), 16, async (filePath): Promise<UnifiedSession | null> => {
     try {
       const metadata = await scanMetadata(filePath, lightweight);
       const id = metadata.id || path.basename(filePath, '.jsonl');
       const cwd = inferredCwd(filePath, metadata.cwd);
-      if (options.cwd && path.resolve(cwd) !== path.resolve(options.cwd)) continue;
+      if (options.cwd && path.resolve(cwd) !== path.resolve(options.cwd)) return null;
       const stat = fs.statSync(filePath);
-      const stats = lightweight ? { lines: 0, bytes: stat.size } : await getFileStats(filePath);
-      sessions.push({
+      // Exact line counts only for small files: large transcripts skip
+      // counting in lightweight discovery, while tiny session stubs stay
+      // cheap to measure and filter as empty.
+      const stats =
+        lightweight && stat.size > SMALL_FILE_EXACT_COUNT_BYTES
+          ? { lines: 0, bytes: stat.size }
+          : await getFileStats(filePath);
+      return {
         id,
         source: 'cmd',
         cwd,
@@ -175,16 +186,20 @@ export async function parseCommandCodeSessions(options: SessionParseOptions = {}
         lines: stats.lines,
         bytes: stat.size,
         createdAt: metadata.firstTimestamp ? new Date(metadata.firstTimestamp) : stat.birthtime,
-        updatedAt: metadata.lastTimestamp ? new Date(metadata.lastTimestamp) : stat.mtime,
+        // Lightweight discovery stops at the first user message, so file mtime
+        // is the accurate "last active" signal for ordering.
+        updatedAt: lightweight ? stat.mtime : metadata.lastTimestamp ? new Date(metadata.lastTimestamp) : stat.mtime,
         originalPath: filePath,
         model: metadata.model,
-      });
+      };
     } catch (err) {
       logger.debug('cmd: skipping unparseable session', filePath, err);
+      return null;
     }
-  }
-  return sessions
-    .filter((session) => lightweight || session.lines > 1)
+  });
+  return parsed
+    .filter((session): session is UnifiedSession => session !== null)
+    .filter((session) => session.lines === 0 || session.lines > 1)
     .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime());
 }
 

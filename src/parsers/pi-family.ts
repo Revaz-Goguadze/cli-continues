@@ -13,7 +13,7 @@ import type {
   UnifiedSession,
 } from '../types/index.js';
 import { isSystemContent } from '../utils/content.js';
-import { findFiles } from '../utils/fs-helpers.js';
+import { findFiles, mapConcurrent } from '../utils/fs-helpers.js';
 import { getFileStats, readJsonlFile, scanJsonlFile, scanJsonlHead } from '../utils/jsonl.js';
 import { generateHandoffMarkdown } from '../utils/markdown.js';
 import { cleanSummary, extractRepoFromCwd, homeDir } from '../utils/parser-helpers.js';
@@ -25,6 +25,9 @@ import {
 import { truncate } from '../utils/tool-summarizer.js';
 
 type PiFamilySource = Extract<SessionSource, 'pi' | 'omp'>;
+
+/** Files up to this size get exact line counts even in lightweight discovery. */
+const SMALL_FILE_EXACT_COUNT_BYTES = 8 * 1024;
 
 interface PiContentBlock {
   type?: string;
@@ -131,8 +134,12 @@ async function scanMetadata(
     return 'continue';
   };
 
-  if (lightweight) await scanJsonlHead(filePath, 100, visitor);
-  else await scanJsonlFile(filePath, visitor);
+  if (lightweight) {
+    await scanJsonlHead(filePath, 100, (parsed) => {
+      visitor(parsed);
+      return firstUserMessage && header ? 'stop' : 'continue';
+    });
+  } else await scanJsonlFile(filePath, visitor);
   return { header, firstUserMessage, sessionName, model, firstTimestamp, lastTimestamp };
 }
 
@@ -141,37 +148,54 @@ export function createPiFamilyParser(definition: PiFamilyDefinition): {
   extractContext: (session: UnifiedSession, config?: VerbosityConfig) => Promise<SessionContext>;
 } {
   const parseSessions = async (options: SessionParseOptions = {}): Promise<UnifiedSession[]> => {
-    const sessions: UnifiedSession[] = [];
     const lightweight = options.lightweight === true;
 
-    for (const filePath of sessionFiles(definition)) {
-      try {
-        const metadata = await scanMetadata(filePath, lightweight);
-        if (!metadata.header?.id || !metadata.header.cwd) continue;
-        if (options.cwd && path.resolve(metadata.header.cwd) !== path.resolve(options.cwd)) continue;
+    const parsed = await mapConcurrent(
+      sessionFiles(definition),
+      16,
+      async (filePath): Promise<UnifiedSession | null> => {
+        try {
+          const metadata = await scanMetadata(filePath, lightweight);
+          if (!metadata.header?.id || !metadata.header.cwd) return null;
+          if (options.cwd && path.resolve(metadata.header.cwd) !== path.resolve(options.cwd)) return null;
 
-        const stat = fs.statSync(filePath);
-        const stats = lightweight ? { lines: 0, bytes: stat.size } : await getFileStats(filePath);
-        sessions.push({
-          id: metadata.header.id,
-          source: definition.source,
-          cwd: metadata.header.cwd,
-          repo: extractRepoFromCwd(metadata.header.cwd),
-          summary: metadata.sessionName || cleanSummary(metadata.firstUserMessage) || undefined,
-          lines: stats.lines,
-          bytes: stat.size,
-          createdAt: metadata.firstTimestamp ? new Date(metadata.firstTimestamp) : stat.birthtime,
-          updatedAt: metadata.lastTimestamp ? new Date(metadata.lastTimestamp) : stat.mtime,
-          originalPath: filePath,
-          model: metadata.model,
-        });
-      } catch (err) {
-        logger.debug(`${definition.source}: skipping unparseable session`, filePath, err);
-      }
-    }
+          const stat = fs.statSync(filePath);
+          // Exact line counts only for small files: large transcripts skip
+          // counting in lightweight discovery, while tiny session stubs stay
+          // cheap to measure and filter as empty.
+          const stats =
+            lightweight && stat.size > SMALL_FILE_EXACT_COUNT_BYTES
+              ? { lines: 0, bytes: stat.size }
+              : await getFileStats(filePath);
+          return {
+            id: metadata.header.id,
+            source: definition.source,
+            cwd: metadata.header.cwd,
+            repo: extractRepoFromCwd(metadata.header.cwd),
+            summary: metadata.sessionName || cleanSummary(metadata.firstUserMessage) || undefined,
+            lines: stats.lines,
+            bytes: stat.size,
+            createdAt: metadata.firstTimestamp ? new Date(metadata.firstTimestamp) : stat.birthtime,
+            // Lightweight discovery stops at the first user message, so file
+            // mtime is the accurate "last active" signal for ordering.
+            updatedAt: lightweight
+              ? stat.mtime
+              : metadata.lastTimestamp
+                ? new Date(metadata.lastTimestamp)
+                : stat.mtime,
+            originalPath: filePath,
+            model: metadata.model,
+          };
+        } catch (err) {
+          logger.debug(`${definition.source}: skipping unparseable session`, filePath, err);
+          return null;
+        }
+      },
+    );
 
-    return sessions
-      .filter((session) => lightweight || session.lines > 1)
+    return parsed
+      .filter((session): session is UnifiedSession => session !== null)
+      .filter((session) => session.lines === 0 || session.lines > 1)
       .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime());
   };
 
